@@ -10,11 +10,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
         }
 
-        // --- Envio de E-mail ---
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || "mail.itcia.com.br",
             port: Number(process.env.SMTP_PORT) || 465,
-            secure: true, // SSL
+            secure: true,
             auth: {
                 user: process.env.SMTP_USER || "sync@itcia.com.br",
                 pass: process.env.SMTP_PASS,
@@ -64,28 +63,6 @@ export async function POST(req: NextRequest) {
                 </div>
             `,
         });
-
-        // --- Envio para Google Sheets (via Apps Script) ---
-        const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
-        if (scriptUrl) {
-            try {
-                await fetch(scriptUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        name,
-                        email,
-                        whatsapp,
-                        product: "e-CPF A1",
-                        date: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
-                        source: "cpfdigital.com.br",
-                    }),
-                });
-            } catch (sheetsErr) {
-                console.error("Erro ao enviar para Google Sheets:", sheetsErr);
-                // Não retorna erro — e-mail já foi enviado com sucesso
-            }
-        }
 
         return NextResponse.json({ success: true });
     } catch (error) {
