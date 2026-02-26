@@ -9,28 +9,23 @@ export default function LeadForm({ formCopy }: { product: string, formCopy: any 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        // 1. Envia para a API (e-mail + Google Sheets)
-        try {
-            await fetch("/api/lead", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
-            });
-        } catch (err) {
-            console.error("Erro ao registrar lead:", err);
-            // Não bloqueia o fluxo mesmo se a API falhar
-        }
-
-        // 2. Abre o WhatsApp com a mensagem pré-formatada
+        // 1. Abre o WhatsApp IMEDIATAMENTE (precisa ser síncrono para o browser permitir)
         const message = `Olá! Acabei de preencher o formulário no site e-CNPJ Digital.\n\n*Nome:* ${formData.name}\n*Email:* ${formData.email}\n*WhatsApp:* ${formData.whatsapp}\n\nTenho interesse na emissão da minha empresa por videoconferência.`;
         const whatsappUrl = `https://api.whatsapp.com/send?phone=5516988443346&text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
 
-        // 3. Redireciona para a página de obrigado
+        // 2. Dispara o e-mail em background (sem await — não bloqueia o usuário)
+        fetch("/api/lead", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData),
+        }).catch(err => console.error("Erro ao registrar lead:", err));
+
+        // 3. Redireciona para a página de obrigado imediatamente
         router.push("/obrigado");
     };
 
