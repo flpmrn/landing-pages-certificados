@@ -18,7 +18,7 @@ export default function LeadForm({ formCopy }: { product: string, formCopy: any 
 
         // Formata a mensagem para o WhatsApp
         const message = `Olá! Acabei de preencher o formulário no site e-CNPJ Digital.\n\n*Nome:* ${formData.name}\n*Email:* ${formData.email}\n*WhatsApp:* ${formData.whatsapp}\n\nTenho interesse na emissão da minha empresa por videoconferência.`;
-        const whatsappUrl = `https://api.whatsapp.com/send?phone=5511999999999&text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=5516988443346&text=${encodeURIComponent(message)}`;
 
         // Abre o WhatsApp e redireciona para a página de obrigado
         window.open(whatsappUrl, "_blank");
