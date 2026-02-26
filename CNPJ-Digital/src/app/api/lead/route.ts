@@ -2,27 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
 export async function POST(req: NextRequest) {
+    console.log("[LEAD API] Requisição recebida");
+    console.log("[LEAD API] SMTP_HOST:", process.env.SMTP_HOST);
+    console.log("[LEAD API] SMTP_PORT:", process.env.SMTP_PORT);
+    console.log("[LEAD API] SMTP_USER:", process.env.SMTP_USER);
+    console.log("[LEAD API] SMTP_PASS:", process.env.SMTP_PASS ? "***definida***" : "NÃO DEFINIDA");
+    console.log("[LEAD API] NOTIFY_EMAIL:", process.env.NOTIFY_EMAIL);
+
     try {
         const body = await req.json();
         const { name, email, whatsapp } = body;
+        console.log("[LEAD API] Lead recebido:", { name, email, whatsapp });
 
         if (!name || !email || !whatsapp) {
             return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
         }
 
+        const smtpHost = process.env.SMTP_HOST || "mail.itcia.com.br";
+        const smtpPort = Number(process.env.SMTP_PORT) || 465;
+        const smtpUser = process.env.SMTP_USER || "sync@itcia.com.br";
+        const smtpPass = process.env.SMTP_PASS;
+        const notifyEmail = process.env.NOTIFY_EMAIL || "compras@itcia.com.br";
+
         const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || "mail.itcia.com.br",
-            port: Number(process.env.SMTP_PORT) || 465,
-            secure: true,
-            auth: {
-                user: process.env.SMTP_USER || "sync@itcia.com.br",
-                pass: process.env.SMTP_PASS,
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
+            auth: { user: smtpUser, pass: smtpPass },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000,
+            tls: {
+                rejectUnauthorized: false,
             },
         });
 
+        console.log("[LEAD API] Tentando conectar ao SMTP...");
+
         await transporter.sendMail({
-            from: `"e-CNPJ Digital" <${process.env.SMTP_USER || "sync@itcia.com.br"}>`,
-            to: process.env.NOTIFY_EMAIL || "compras@itcia.com.br",
+            from: `"e-CNPJ Digital" <${smtpUser}>`,
+            to: notifyEmail,
             subject: `🎯 Novo Lead e-CNPJ: ${name}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9;">
@@ -64,9 +83,11 @@ export async function POST(req: NextRequest) {
             `,
         });
 
+        console.log("[LEAD API] E-mail enviado com sucesso para", notifyEmail);
         return NextResponse.json({ success: true });
+
     } catch (error) {
-        console.error("Erro ao processar lead:", error);
-        return NextResponse.json({ error: "Erro interno ao processar lead" }, { status: 500 });
+        console.error("[LEAD API] ERRO ao enviar e-mail:", error);
+        return NextResponse.json({ success: false, error: String(error) });
     }
 }
