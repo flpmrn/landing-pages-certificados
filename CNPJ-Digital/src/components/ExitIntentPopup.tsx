@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 interface ExitPopupProps {
     onApplyDiscount: () => void;
@@ -7,31 +7,58 @@ interface ExitPopupProps {
 
 export default function ExitIntentPopup({ onApplyDiscount }: ExitPopupProps) {
     const [isVisible, setIsVisible] = useState(false);
-    const [hasTriggered, setHasTriggered] = useState(false);
+    const hasTriggered = useRef(false);
+
+    const trigger = () => {
+        if (!hasTriggered.current) {
+            hasTriggered.current = true;
+            setIsVisible(true);
+        }
+    };
 
     useEffect(() => {
+        // Gatilho 1 (Desktop): mouse sai pelo topo da janela
         const handleMouseLeave = (e: MouseEvent) => {
-            if (e.clientY <= 0 && !hasTriggered) {
-                setIsVisible(true);
-                setHasTriggered(true);
-            }
+            if (e.clientY <= 5) trigger();
         };
 
-        document.addEventListener("mouseleave", handleMouseLeave);
+        // Gatilho 2 (Universal): usuário troca de aba / minimiza janela
+        const handleVisibilityChange = () => {
+            if (document.hidden) trigger();
+        };
 
-        // Fallback para mobile (mostra o popup após 40s de permanência na página se não foi disparado por exit intent visual)
-        const timer = setTimeout(() => {
-            if (!hasTriggered) {
-                setIsVisible(true);
-                setHasTriggered(true);
+        // Gatilho 3 (Mobile): usuário scrolla para baixo e depois scrola de volta
+        // (comportamento comum de quem vai fechar o app/browser)
+        let lastScrollY = window.scrollY;
+        let maxScrollY = window.scrollY;
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > maxScrollY) {
+                maxScrollY = currentScrollY;
             }
-        }, 40000);
+            // Se scrollou para baixo pelo menos 200px e voltou 150px = intenção de sair
+            const scrolledDown = maxScrollY > 200;
+            const scrollingUp = currentScrollY < lastScrollY - 50;
+            if (scrolledDown && scrollingUp && maxScrollY - currentScrollY > 150) {
+                trigger();
+            }
+            lastScrollY = currentScrollY;
+        };
+
+        // Gatilho 4 (Fallback): 45 segundos de permanência na página
+        const timer = setTimeout(trigger, 45000);
+
+        document.addEventListener("mouseleave", handleMouseLeave);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("scroll", handleScroll, { passive: true });
 
         return () => {
             document.removeEventListener("mouseleave", handleMouseLeave);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("scroll", handleScroll);
             clearTimeout(timer);
         };
-    }, [hasTriggered]);
+    }, []);
 
     if (!isVisible) return null;
 
@@ -48,7 +75,7 @@ export default function ExitIntentPopup({ onApplyDiscount }: ExitPopupProps) {
                     <span className="text-5xl mb-4 block">🎁</span>
                     <h2 className="font-montserrat text-2xl font-bold text-navy-blue mb-2">Espera! Antes de sair...</h2>
                     <p className="font-inter text-gray-600 mb-6 leading-relaxed">
-                        Sabemos que a sua empresa precisa dessa solução o quanto antes. Liberamos um <strong>cupom exclusivo</strong> que reduz o valor do seu certificado digital de R$ 149,00 para <strong>apenas R$ 99,90</strong>.
+                        Sabemos que a sua vida precisa dessa solução o quanto antes. Liberamos um <strong>cupom exclusivo</strong> que reduz o valor do seu certificado digital de R$ 149,00 para <strong>apenas R$ 99,90</strong>.
                     </p>
                     <button
                         onClick={() => {
