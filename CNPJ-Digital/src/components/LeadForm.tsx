@@ -5,23 +5,32 @@ import { useRouter } from "next/navigation";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function LeadForm({ formCopy }: { product: string, formCopy: any }) {
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        whatsapp: "",
-    });
-
+    const [formData, setFormData] = useState({ name: "", email: "", whatsapp: "" });
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
 
-        // Formata a mensagem para o WhatsApp
+        // 1. Envia para a API (e-mail + Google Sheets)
+        try {
+            await fetch("/api/lead", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+        } catch (err) {
+            console.error("Erro ao registrar lead:", err);
+            // Não bloqueia o fluxo mesmo se a API falhar
+        }
+
+        // 2. Abre o WhatsApp com a mensagem pré-formatada
         const message = `Olá! Acabei de preencher o formulário no site e-CNPJ Digital.\n\n*Nome:* ${formData.name}\n*Email:* ${formData.email}\n*WhatsApp:* ${formData.whatsapp}\n\nTenho interesse na emissão da minha empresa por videoconferência.`;
         const whatsappUrl = `https://api.whatsapp.com/send?phone=5516988443346&text=${encodeURIComponent(message)}`;
-
-        // Abre o WhatsApp e redireciona para a página de obrigado
         window.open(whatsappUrl, "_blank");
+
+        // 3. Redireciona para a página de obrigado
         router.push("/obrigado");
     };
 
@@ -86,9 +95,10 @@ export default function LeadForm({ formCopy }: { product: string, formCopy: any 
 
                 <button
                     type="submit"
-                    className="mt-4 w-full bg-bright-orange hover:bg-orange-600 text-white font-montserrat font-black text-sm sm:text-lg py-5 px-2 rounded-xl shadow-[0_4px_14px_0_rgba(255,87,34,0.39)] transition-all hover:shadow-[0_6px_20px_rgba(255,87,34,0.23)] hover:-translate-y-1 block text-center"
+                    disabled={isSubmitting}
+                    className="mt-4 w-full bg-bright-orange hover:bg-orange-600 disabled:bg-orange-300 text-white font-montserrat font-black text-sm sm:text-lg py-5 px-2 rounded-xl shadow-[0_4px_14px_0_rgba(255,87,34,0.39)] transition-all hover:shadow-[0_6px_20px_rgba(255,87,34,0.23)] hover:-translate-y-1 block text-center"
                 >
-                    {formCopy.cta}
+                    {isSubmitting ? "Enviando..." : formCopy.cta}
                 </button>
             </form>
         </div>
